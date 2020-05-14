@@ -95,22 +95,25 @@
                                     <span ng-if="vm.importForm.$submitted && vm.importForm['name_' + variantKey].$invalid">This field is required.</span>
                                 </div>
                             </div>
+                            
+                            <div ng-repeat="(groupKey, group) in variant.PropertyGroups">
+                                <div class="prop-group-title">{{ group.Name }}</div>
+                                <div ng-repeat="(propKey, prop) in group.PropertyTypes" class="flex">
+                                    <div class="prop-label mb-1">
+                                        <span>{{ prop.Name }}</span>
+                                        <br/>
+                                        <span class="alias">{{ prop.Alias }}</span>
+                                    </div>
+                                    <div class="prop-value" style="margin-bottom: 10px;">
+                                        <select name="{{ 'field_' + variantKey + '_' + tabKey + '_' + propKey  }}"
+                                                ng-model="prop.CsvHeader"
+                                                ng-options="header for header in vm.csvHeaders"
+                                                no-dirty-check
+                                                style="margin-bottom: 2px;">
+                                        </select>
 
-                            <div ng-repeat="(propKey, prop) in variant.PropertyTypes" class="flex">
-                                <div class="prop-label mb-1">
-                                    <span>{{ prop.Name }}</span>
-                                    <br/>
-                                    <span class="alias">{{ prop.Alias }}</span>
-                                </div>
-                                <div class="prop-value" style="margin-bottom:10px;">
-                                    <select name="{{ 'field_' + variantKey + '_' + tabKey + '_' + propKey  }}"
-                                            ng-model="prop.CsvHeader"
-                                            ng-options="header for header in vm.csvHeaders"
-                                            no-dirty-check
-                                            style="margin-bottom:2px;">
-                                    </select>
-
-                                    <span ng-if="vm.importForm.$submitted && vm.importForm['field_' + variantKey + '_' + tabKey + '_' + propKey].$invalid">This field is required.</span>
+                                        <span ng-if="vm.importForm.$submitted && vm.importForm['field_' + variantKey + '_' + tabKey + '_' + propKey].$invalid">This field is required.</span>
+                                    </div>
                                 </div>
                             </div>
 

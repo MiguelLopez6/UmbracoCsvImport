@@ -100,12 +100,14 @@
 
         angular.forEach(page.Variants, function (variant) {
             variant.Language.Value = row[variant.Language.CsvHeader];
-            angular.forEach(variant.PropertyTypes, function (propType) {
-                propType.Value = row[propType.CsvHeader];
-            });
+            angular.forEach(variant.PropertyGroups, function (propGroup) {
+                angular.forEach(propGroup.PropertyTypes, function (propType) {
+                    propType.Value = row[propType.CsvHeader];
+                });
 
-            // remove empty fields before sending to server
-            variant.PropertyTypes = variant.PropertyTypes.filter(p => p.Value);
+                // remove empty fields before sending to server
+                propGroup.PropertyTypes = propGroup.PropertyTypes.filter(p => p.Value);
+            });
         });
 
         var data = {

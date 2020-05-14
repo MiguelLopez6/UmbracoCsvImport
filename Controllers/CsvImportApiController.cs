@@ -32,8 +32,10 @@ namespace UmbracoCsvImport.Controllers
                     if (model.Page.AllowVaryingByCulture)
                         content.SetCultureName(variant.Language.Value, variant.Language.CultureInfo);
 
-                    if (variant.PropertyTypes != null)
-                        foreach (var prop in variant.PropertyTypes)
+                    var propertyTypes = variant.PropertyGroups?.SelectMany(group => group.PropertyTypes).ToList();
+
+                    if (propertyTypes != null && propertyTypes.Any())
+                        foreach (var prop in propertyTypes)
                             if (prop.AllowVaryingByCulture)
                                 content.SetValue(prop.Alias, prop.Value, culture: variant.Language.CultureInfo);
                             else
@@ -58,7 +60,9 @@ namespace UmbracoCsvImport.Controllers
         {
             var page = new Page();
             var contentType = Services.ContentTypeService.Get(contentTypeId);
-            var properties = contentType.CompositionPropertyGroups.OrderBy(group => group.SortOrder).SelectMany(group => group.PropertyTypes.OrderBy(p => p.SortOrder));
+
+            var propertyGroups = contentType.CompositionPropertyGroups.OrderBy(group => group.SortOrder)
+                .GroupBy(group => group.Name);
 
             page.Variants = new List<Variant>();
             page.AllowVaryingByCulture = contentType.Variations.Equals(ContentVariation.Culture);
@@ -81,22 +85,38 @@ namespace UmbracoCsvImport.Controllers
                 var variant = new Variant()
                 {
                     Language = language,
-                    PropertyTypes = new List<Models.PropertyType>()
+                    PropertyGroups = new List<Models.PropertyGroup>()
                 };
 
-                foreach (var prop in properties)
+                foreach (var group in propertyGroups)
                 {
-                    var propAllowVaryingByCulture = prop.Variations.Equals(ContentVariation.Culture);
-
-                    if (!lang.IsDefault && !propAllowVaryingByCulture)
-                    { }
-                    else
+                    var propGroup = new Models.PropertyGroup
                     {
-                        var propType = new Models.PropertyType();
-                        propType.Alias = prop.Alias;
-                        propType.Name = prop.Name;
-                        propType.AllowVaryingByCulture = propAllowVaryingByCulture;
-                        variant.PropertyTypes.Add(propType);
+                        Name = group.Key,
+                        PropertyTypes = new List<Models.PropertyType>()
+                    };
+
+                    var groupPropertyTypes = group.SelectMany(x => x.PropertyTypes).OrderBy(p => p.SortOrder);
+
+                    foreach (var prop in groupPropertyTypes)
+                    {
+                        var propAllowVaryingByCulture = prop.Variations.Equals(ContentVariation.Culture);
+
+                        if (!lang.IsDefault && !propAllowVaryingByCulture)
+                        { }
+                        else
+                        {
+                            var propType = new Models.PropertyType();
+                            propType.Alias = prop.Alias;
+                            propType.Name = prop.Name;
+                            propType.AllowVaryingByCulture = propAllowVaryingByCulture;
+                            propGroup.PropertyTypes.Add(propType);
+                        }
+                    }
+
+                    if (propGroup.PropertyTypes.Any())
+                    {
+                        variant.PropertyGroups.Add(propGroup);
                     }
                 }
 

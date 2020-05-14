@@ -58,6 +58,11 @@
 .csvimport .variant-tab--active a {
   color: #000; }
 
+.csvimport .prop-group-title {
+    border-bottom: 1px solid #e9e9eb;
+    margin-bottom: 1rem;
+    margin-top: 1rem; }
+
 .csvimport .prop-label {
   width: 250px;
   margin-right: 1rem; }
