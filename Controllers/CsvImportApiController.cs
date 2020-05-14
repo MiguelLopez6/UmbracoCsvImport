@@ -12,6 +12,7 @@ namespace UmbracoCsvImport.Controllers
 {
     public class CsvImportApiController : UmbracoAuthorizedApiController
     {
+        private static readonly string[] SkipEditors = {"Our.Umbraco.Matryoshka.GroupSeparator"};
 
         [HttpPost]
         public HttpResponseMessage Publish(ImportData model)
@@ -100,6 +101,11 @@ namespace UmbracoCsvImport.Controllers
 
                     foreach (var prop in groupPropertyTypes)
                     {
+                        if (SkipEditors.Contains(prop.PropertyEditorAlias))
+                        {
+                            continue;
+                        }
+
                         var propAllowVaryingByCulture = prop.Variations.Equals(ContentVariation.Culture);
 
                         if (!lang.IsDefault && !propAllowVaryingByCulture)
