@@ -34,6 +34,11 @@
 .csvimport .step-label {
   margin-bottom: 1rem; }
 
+.csvimport .step-label .alias {
+    color: #a2a1a6;
+    font-size: 13px;
+    word-break: break-all; }
+
 .csvimport small {
   display: block;
   color: gray; }

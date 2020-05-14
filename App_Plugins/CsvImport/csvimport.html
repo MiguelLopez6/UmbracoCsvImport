@@ -99,7 +99,8 @@
                             <div ng-repeat="(propKey, prop) in variant.PropertyTypes" class="flex">
                                 <div class="prop-label mb-1">
                                     <span>{{ prop.Name }}</span>
-
+                                    <br/>
+                                    <span class="alias">{{ prop.Alias }}</span>
                                 </div>
                                 <div class="prop-value" style="margin-bottom:10px;">
                                     <select name="{{ 'field_' + variantKey + '_' + tabKey + '_' + propKey  }}"

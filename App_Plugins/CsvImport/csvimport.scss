@@ -75,6 +75,12 @@
     .prop-label {
         width: 250px;
         margin-right: 1rem;
+
+        .alias {
+            color: #a2a1a6;
+            font-size: 13px;
+            word-break: break-all;
+        }
     }
 
     .prop-value {

@@ -58,7 +58,7 @@ namespace UmbracoCsvImport.Controllers
         {
             var page = new Page();
             var contentType = Services.ContentTypeService.Get(contentTypeId);
-            var properties = contentType.CompositionPropertyTypes;
+            var properties = contentType.CompositionPropertyGroups.OrderBy(group => group.SortOrder).SelectMany(group => group.PropertyTypes.OrderBy(p => p.SortOrder));
 
             page.Variants = new List<Variant>();
             page.AllowVaryingByCulture = contentType.Variations.Equals(ContentVariation.Culture);
