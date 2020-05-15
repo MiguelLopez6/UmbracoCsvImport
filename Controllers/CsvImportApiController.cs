@@ -6,6 +6,9 @@ using System.Web.Mvc;
 using Umbraco.Core.Models;
 using Umbraco.Web.WebApi;
 using System.Net;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using Umbraco.Core;
 using UmbracoCsvImport.Models;
 
 namespace UmbracoCsvImport.Controllers
@@ -38,9 +41,9 @@ namespace UmbracoCsvImport.Controllers
                     if (propertyTypes != null && propertyTypes.Any())
                         foreach (var prop in propertyTypes)
                             if (prop.AllowVaryingByCulture)
-                                content.SetValue(prop.Alias, prop.Value, culture: variant.Language.CultureInfo);
+                                this.SetPropertyValue(content, prop, variant.Language.CultureInfo);
                             else
-                                content.SetValue(prop.Alias, prop.Value);
+                                this.SetPropertyValue(content, prop, null);
                 }
 
                 if (model.Page.AllowVaryingByCulture)
@@ -130,6 +133,113 @@ namespace UmbracoCsvImport.Controllers
             }
 
             return Request.CreateResponse(HttpStatusCode.OK, page);
+        }
+
+        private void SetPropertyValue(IContent content, Models.PropertyType prop, string culture)
+        {
+            if (content.HasProperty(prop.Alias))
+            {
+                var property = content.Properties[prop.Alias];
+                var value = this.FormatPropertyValueForEditor(property, prop.Value);
+
+                if (value != null)
+                {
+                    content.SetValue(prop.Alias, value, culture: culture);
+                }
+            }
+        }
+
+        private object FormatPropertyValueForEditor(Property property, string propValue)
+        {
+            switch (property.PropertyType.PropertyEditorAlias)
+            {
+                case "Umbraco.CheckBoxList":
+                case "Umbraco.DropDown.Flexible":
+                    return this.FormatMultipleSelectionValue(propValue);
+                case "Umbraco.ColorPicker":
+                    return this.FormatColorPickerValue(propValue);
+                case "Umbraco.ContentPicker":
+                case "Umbraco.MediaPicker":
+                case "Umbraco.MemberPicker":
+                case "Umbraco.MultiNodeTreePicker":
+                    return this.FormatPickerValue(property, propValue);
+                case "Umbraco.TrueFalse":
+                    return this.FormatTrueFalseValue(propValue);
+                default:
+                    return propValue;
+            }
+        }
+
+        private int FormatTrueFalseValue(string propValue)
+        {
+            if (bool.TryParse(propValue, out var value))
+            {
+                return value ? 1 : 0;
+            }
+            else if (propValue.Trim().Equals("yes", StringComparison.InvariantCultureIgnoreCase))
+            {
+                return 1;
+            }
+            else if (propValue.Trim().Equals("no", StringComparison.InvariantCultureIgnoreCase))
+            {
+                return 0;
+            }
+            else
+            {
+                return int.Parse(propValue);
+            }
+        }
+
+        private string FormatMultipleSelectionValue(string propValue)
+        {
+            var values = propValue.Split(',').Select(x => x.Trim());
+
+            return JsonConvert.SerializeObject(values);
+        }
+
+        private string FormatColorPickerValue(string propValue)
+        {
+            if (propValue.StartsWith("#"))
+            {
+                propValue = propValue.TrimStart('#');
+            }
+
+            return propValue;
+        }
+
+        private string FormatPickerValue(Property property, string propValue)
+        {
+            var maxItems = 1;
+            var dataType = Services.DataTypeService.GetDataType(property.PropertyType.DataTypeId);
+
+            if (dataType != null)
+            {
+                var config = JObject.FromObject(dataType.Configuration);
+
+                if (config.ContainsKey("Multiple"))
+                {
+                    maxItems = config.Value<bool>("Multiple") ? 0 : 1;
+                }
+                else if (config.ContainsKey("MaxNumber"))
+                {
+                    maxItems = config.Value<int>("MaxNumber");
+                }
+            }
+
+            var result = new List<Udi>();
+            var values = propValue.Split(',');
+
+            foreach (var val in values)
+            {
+                if (GuidUdi.TryParse(val, out GuidUdi udi))
+                {
+                    result.Add(udi);
+                }
+            }
+
+            var take = maxItems > 0 ? result.Take(maxItems).ToList() : result;
+
+            return string.Join(",", take.Select(x => x.ToString()));
         }
     }
 }
