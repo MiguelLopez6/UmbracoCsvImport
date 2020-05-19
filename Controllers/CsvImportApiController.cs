@@ -17,6 +17,12 @@ namespace UmbracoCsvImport.Controllers
     {
         private static readonly string[] SkipEditors = {"Our.Umbraco.Matryoshka.GroupSeparator"};
 
+        private static readonly string LeafletMapEditor = "Vizioz.LeafletMap";
+
+        private static readonly string LatitudePropertyName = "Map Latitude";
+
+        private static readonly string LongitudePropertyName = "Map Longitude";
+
         [HttpPost]
         public HttpResponseMessage Publish(ImportData model)
         {
@@ -39,15 +45,29 @@ namespace UmbracoCsvImport.Controllers
                     var propertyTypes = variant.PropertyGroups?.SelectMany(group => group.PropertyTypes).ToList();
 
                     if (propertyTypes != null && propertyTypes.Any())
+                    {
                         foreach (var prop in propertyTypes)
-                            if (prop.AllowVaryingByCulture)
-                                this.SetPropertyValue(content, prop, variant.Language.CultureInfo);
-                            else
-                                this.SetPropertyValue(content, prop, null);
+                        {
+                            this.SetPropertyValue(content, prop, prop.AllowVaryingByCulture ? variant.Language.CultureInfo : null);
+                        }
+
+                        // Get lat and lon values for custom map property
+                        var lat = propertyTypes.FirstOrDefault(x => x.Name == LatitudePropertyName);
+                        var lon = propertyTypes.FirstOrDefault(x => x.Name == LongitudePropertyName);
+                        var zoom = lat != null && lon != null ? 13 : 2;
+
+                        var mapProperty = new Models.PropertyType
+                        {
+                            Alias = lat?.Alias,
+                            AllowVaryingByCulture = lat?.AllowVaryingByCulture ?? false,
+                            Value = $"{{\"latLng\":[{lat?.Value},{lon?.Value}],\"zoom\":{zoom}}}"
+                        };
+                        this.SetPropertyValue(content, mapProperty, mapProperty.AllowVaryingByCulture ? variant.Language.CultureInfo : null);
+                    }
                 }
 
                 if (model.Page.AllowVaryingByCulture)
-                    cs.SaveAndPublish(content, defaultVariant.Language.CultureInfo);
+                    cs.SaveAndPublish(content, defaultVariant.Language.CultureInfo, raiseEvents: false);
                 else
                     cs.SaveAndPublish(content);
 
@@ -66,7 +86,7 @@ namespace UmbracoCsvImport.Controllers
             var contentType = Services.ContentTypeService.Get(contentTypeId);
 
             var propertyGroups = contentType.CompositionPropertyGroups.OrderBy(group => group.SortOrder)
-                .GroupBy(group => group.Name);
+                .GroupBy(group => group.Name).ToList();
 
             page.Variants = new List<Variant>();
             page.AllowVaryingByCulture = contentType.Variations.Equals(ContentVariation.Culture);
@@ -115,11 +135,33 @@ namespace UmbracoCsvImport.Controllers
                         { }
                         else
                         {
-                            var propType = new Models.PropertyType();
-                            propType.Alias = prop.Alias;
-                            propType.Name = prop.Name;
-                            propType.AllowVaryingByCulture = propAllowVaryingByCulture;
-                            propGroup.PropertyTypes.Add(propType);
+                            // Let parsing lat and lon values separately for custom map property
+                            if (prop.PropertyEditorAlias == LeafletMapEditor)
+                            {
+                                var lat = new Models.PropertyType
+                                {
+                                    Alias = prop.Alias,
+                                    Name = LatitudePropertyName,
+                                    AllowVaryingByCulture = propAllowVaryingByCulture
+                                };
+                                propGroup.PropertyTypes.Add(lat);
+
+                                var lon = new Models.PropertyType
+                                {
+                                    Alias = prop.Alias,
+                                    Name = LongitudePropertyName,
+                                    AllowVaryingByCulture = propAllowVaryingByCulture
+                                };
+                                propGroup.PropertyTypes.Add(lon);
+                            }
+                            else
+                            {
+                                var propType = new Models.PropertyType();
+                                propType.Alias = prop.Alias;
+                                propType.Name = prop.Name;
+                                propType.AllowVaryingByCulture = propAllowVaryingByCulture;
+                                propGroup.PropertyTypes.Add(propType);
+                            }
                         }
                     }
 
